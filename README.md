@@ -1,159 +1,205 @@
-# Weather App Deployment Using Docker and Docker-Compose
+ 
 
-This guide provides step-by-step instructions to deploy a simple weather application using Flask, Docker, and Docker-Compose.
+# Weather App Microservices
+
+This project demonstrates a weather application divided into three distinct microservices, each handling a specific functionality. The services are built using Flask and Dockerized for easy deployment.
+
+---
+
+## Microservices Breakdown
+
+### 1. **Weather Data Service**
+- Fetches weather data from the OpenWeatherMap API.
+- Exposes an endpoint to retrieve weather information for a given city.
+
+### 2. **User Preferences Service**
+- Manages user-specific preferences such as temperature units and default location.
+- Allows saving and retrieving user preferences.
+
+### 3. **Notification Service**
+- Sends notifications (e.g., weather alerts or daily summaries) to users.
+- Simulates notification sending with a simple API endpoint.
+
+---
+
+## Project Structure
+
+```plaintext
+weather-app/
+├── weather-data-service/
+│   ├── app.py
+│   ├── Dockerfile
+├── user-preferences-service/
+│   ├── app.py
+│   ├── Dockerfile
+├── notification-service/
+│   ├── app.py
+│   ├── Dockerfile
+├── docker-compose.yml
+```
 
 ---
 
 ## Prerequisites
-- CentOS-based system
-- `sudo` privileges
-- Internet connection
 
----
-
-## Step 1: Install Docker
-
-1. Install `yum-utils` and add the Docker repository:
+1. **Docker**: Install Docker on your system.
    ```bash
-   sudo yum install -y yum-utils
-   sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-   ```
-
-2. Install Docker:
-   ```bash
-   sudo yum install -y docker-ce docker-ce-cli containerd.io
-   ```
-
-3. Start and enable Docker:
-   ```bash
+   sudo yum install -y docker
    sudo systemctl start docker
    sudo systemctl enable docker
-   ```
-
-4. Verify the Docker installation:
-   ```bash
    docker --version
    ```
-
----
-
-## Step 2: Install Docker-Compose
-
-1. Download the Docker-Compose binary:
+2. **Docker Compose** (optional): For managing all services together.
    ```bash
-   sudo curl -L "https://github.com/docker/compose/releases/download/$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep tag_name | cut -d '"' -f 4)/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-   ```
-
-2. Grant executable permissions:
-   ```bash
+   sudo curl -L "https://github.com/docker/compose/releases/download/v2.5.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
    sudo chmod +x /usr/local/bin/docker-compose
-   ```
-
-3. Verify the Docker-Compose installation:
-   ```bash
    docker-compose --version
    ```
 
 ---
 
-## Step 3: Create the Weather Application
+## Getting Started
 
-1. Create the project directory:
-   ```bash
-   mkdir weather-app
-   cd weather-app
-   ```
+### 1. Clone the Repository
 
-2. Create a subdirectory for the weather service:
+```bash
+git clone https://github.com/yourusername/weather-app.git
+cd weather-app
+```
+
+### 2. Build and Run the Services
+
+#### Using Docker Compose (Recommended)
+
+```bash
+docker-compose up --build
+```
+
+#### Running Each Service Individually
+
+1. **Weather Data Service**:
    ```bash
-   mkdir weather-data-service
    cd weather-data-service
+   docker build -t weather-data-service .
+   docker run -d -p 5001:5001 weather-data-service
    ```
 
-3. Create the application file:
+2. **User Preferences Service**:
    ```bash
-   sudo nano app.py
+   cd ../user-preferences-service
+   docker build -t user-preferences-service .
+   docker run -d -p 5002:5002 user-preferences-service
    ```
 
-4. Add the following Python code to `app.py`:
-   ```python
-   from flask import Flask, request, jsonify
-   import requests
-
-   app = Flask(__name__)
-
-   API_KEY = "3cb90eeb1d49ffd71ad2d4af46e127f9"  # Replace with your OpenWeatherMap API key
-
-   @app.route('/weather', methods=['GET'])
-   def get_weather():
-       city = request.args.get('city')
-       if not city:
-           return jsonify({"error": "Please provide a city name"}), 400
-
-       url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}"
-       response = requests.get(url)
-
-       if response.status_code != 200:
-           return jsonify({"error": "City not found"}), 404
-
-       data = response.json()
-       return jsonify({
-           "city": city,
-           "temperature": data['main']['temp'],
-           "description": data['weather'][0]['description']
-       })
-
-   if __name__ == '__main__':
-       app.run(host='0.0.0.0', port=5001)
-   ```
-
-5. Create a Dockerfile:
+3. **Notification Service**:
    ```bash
-   sudo nano Dockerfile
-   ```
-
-6. Add the following content to the `Dockerfile`:
-   ```dockerfile
-   FROM python:3.9-slim
-   WORKDIR /app
-   COPY app.py /app
-   RUN pip install flask requests
-   EXPOSE 5001
-   CMD ["python", "app.py"]
-   ```
-
-7. Build and run the service:
-   ```bash
-   sudo docker-compose up -d --build weather-data-service
+   cd ../notification-service
+   docker build -t notification-service .
+   docker run -d -p 5003:5003 notification-service
    ```
 
 ---
 
-## Step 4: Create Docker-Compose Configuration
+## API Endpoints
 
-1. Navigate to the project root directory:
+### 1. **Weather Data Service**
+
+- **Endpoint**: `/weather`
+- **Method**: `GET`
+- **Parameters**:
+  - `city`: Name of the city.
+- **Example**:
+  ```bash
+  curl "http://localhost:5001/weather?city=London"
+  ```
+
+---
+
+### 2. **User Preferences Service**
+
+- **Endpoint**: `/preferences`
+- **Methods**:
+  - `POST`: Save user preferences.
+  - `GET`: Retrieve user preferences.
+- **Example**:
+  - Save preferences:
+    ```bash
+    curl -X POST -H "Content-Type: application/json" -d '{"user_id": "123", "preferences": {"unit": "metric", "location": "London"}}' "http://localhost:5002/preferences"
+    ```
+  - Get preferences:
+    ```bash
+    curl "http://localhost:5002/preferences?user_id=123"
+    ```
+
+---
+
+### 3. **Notification Service**
+
+- **Endpoint**: `/send_notification`
+- **Method**: `GET`
+- **Example**:
+  ```bash
+  curl "http://localhost:5003/send_notification"
+  ```
+
+---
+
+## Push Images to Docker Hub
+
+1. **Tag the images**:
    ```bash
-   cd ..
+   docker tag weather-data-service mustafabugti/weather-data-service
+   docker tag user-preferences-service mustafabugti/user-preferences-service
+   docker tag notification-service mustafabugti/notification-service
    ```
 
-2. Create the `docker-compose.yml` file:
+2. **Push the images**:
    ```bash
-   sudo nano docker-compose.yml
+   docker push mustafabugti/weather-data-service
+   docker push mustafabugti/user-preferences-service
+   docker push mustafabugti/notification-service
    ```
 
-3. Add the following content to `docker-compose.yml`:
-   ```yaml
-   version: '3.8'
-   services:
-     weather-data-service:
-       build:
-         context: ./weather-data-service
-       ports:
-         - "5001:5001"
-   ```
+---
 
-4. Deploy the application:
+## Pull and Run on Another System
+
+1. **Pull the images**:
    ```bash
-   sudo docker-compose up -d
+   docker pull mustafabugti/weather-data-service
+   docker pull mustafabugti/user-preferences-service
+   docker pull mustafabugti/notification-service
    ```
-curl "http://localhost:5001/weather?city=London"
+
+2. **Run the containers**:
+   ```bash
+   docker run -d -p 5001:5001 mustafabugti/weather-data-service
+   docker run -d -p 5002:5002 mustafabugti/user-preferences-service
+   docker run -d -p 5003:5003 mustafabugti/notification-service
+   ```
+
+---
+
+## Testing the Application
+
+1. **Weather Data Service**:
+   ```bash
+   curl "http://localhost:5001/weather?city=London"
+   ```
+
+2. **User Preferences Service**:
+   - Save preferences:
+     ```bash
+     curl -X POST -H "Content-Type: application/json" -d '{"user_id": "123", "preferences": {"unit": "metric", "location": "London"}}' "http://localhost:5002/preferences"
+     ```
+   - Retrieve preferences:
+     ```bash
+     curl "http://localhost:5002/preferences?user_id=123"
+     ```
+
+3. **Notification Service**:
+   ```bash
+   curl "http://localhost:5003/send_notification"
+   ```
+
+---
