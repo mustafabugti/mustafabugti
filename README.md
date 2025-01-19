@@ -1,6 +1,4 @@
-Here is the complete **ReadMe.md** file with all Python codes, Dockerfiles, and the Docker Compose file included:
-
----
+ 
 
 # Weather App Microservices
 
